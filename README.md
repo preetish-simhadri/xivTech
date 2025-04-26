@@ -80,17 +80,18 @@ curl http://localhost:$NODE_PORT
 │   └── Dockerfile             # Docker configuration for NGINX
 ├── k8s/
 │   ├── deployment.yaml        # Kubernetes deployment configuration
-│   └── service.yaml           # Kubernetes service configuration
+│   ├── service.yaml           # Kubernetes service configuration
+│   └── argocd-app.yaml        # Argo CD application manifest
 ├── demo/
-│   └── video.mp4              # Demo video of the setup process
+│   └── steps_video.mp4        # Demo video of the setup process
 └── README.md                  # Project documentation
 ```
 
-## Optional: Argo CD Setup
+## Argo CD Implementation
 
-To implement continuous delivery with Argo CD:
+This project includes a working implementation of GitOps-based continuous delivery using Argo CD. The following steps outline how it was set up and how you can access it:
 
-1. Install Argo CD in your Kubernetes cluster:
+1. Argo CD was installed in the Kubernetes cluster:
 
 ```bash
 # Create namespace
@@ -103,7 +104,7 @@ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/st
 kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
 ```
 
-2. Access the Argo CD API Server:
+2. Access the Argo CD UI by setting up port forwarding:
 
 ```bash
 # Port-forward the Argo CD API server
@@ -113,12 +114,31 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 3. Get the initial admin password:
 
 ```bash
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+# This command will output the initial admin password
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | ForEach-Object { [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_)) }
 ```
 
-4. Log in to the Argo CD UI at http://localhost:8080 with username `admin` and the password from the previous step.
+4. Log in to the Argo CD UI:
+   - Open your browser and navigate to: https://localhost:8080
+   - Username: `admin`
+   - Password: Use the output from the command in step 3
+   - Note: You might need to accept the self-signed certificate warning in your browser
 
-5. Create an application in Argo CD pointing to your Git repository containing this project.
+5. The application has been configured with the following settings:
+   - Application Name: hello-world-nginx
+   - Source Repository: https://github.com/preetish-simhadri/xivTech
+   - Path in Repository: k8s/
+   - Destination Namespace: default
+   - Sync Policy: Automated (with self-healing and pruning enabled)
+
+6. The application configuration is defined in the `k8s/argocd-app.yaml` file:
+
+```bash
+# Apply the Argo CD application manifest
+kubectl apply -f k8s/argocd-app.yaml
+```
+
+With this setup, any changes pushed to the k8s directory in the GitHub repository will automatically be synchronized to your Kubernetes cluster, demonstrating a complete CI/CD pipeline.
 
 ---
 
